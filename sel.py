@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.options import Options
 import time
 from fake_useragent import UserAgent
 import random
+import pandas as pd
 
 ua = UserAgent()
 user_agents = [
@@ -28,7 +29,7 @@ distance = 25
 driver.get(url.format(distance))
 
 # Wait for the page to load
-time.sleep(2)
+time.sleep(1)
 
 def number_of_pages():
     try:
@@ -39,29 +40,45 @@ def number_of_pages():
         return 1
 
 max_page = number_of_pages()
+print(f'Number of pages {max_page}')
 
-# Find listings
-# listings = driver.find_elements(By.CLASS_NAME, 'css-136g1q2')
-listings = driver.find_elements(By.CLASS_NAME, 'css-13gthep')#'css-16vl3c1')
+columns = ['Title', 'Price', 'PpSM', 'Area', 'Street', 'City', 'Commune', 'District', 'Voivodeship', 'Rooms', 'Heating', 'Floor', 'Rent', 'Condition', 'Market', 'Form of Ownership',
+           'Availability', 'Seller type', 'Additional Information', 
+           'Year', 'Elevator', 'Type of Development', 'Material', 'Windows', 'Energy Certificate', 'Safety', #Building and materials
+           'Security', 'Media', #Equipment
+           'Description']
+df = pd.DataFrame()
 
-# Extract data
-# houses = []
-for listing in listings[:1]:
-    print(listing.get_attribute('href'))
-    listing.click()
-    # house_info = listing.text.split('\n')
-    # print(house_info)
-    # title = listing.find_element(By.CSS_SELECTOR, 'h3.css-1rhznz4').text.strip()
-#     price = listing.find_element(By.CSS_SELECTOR, 'p.css-lk61n3').text.strip()
-#     location = listing.find_element(By.CSS_SELECTOR, 'p.css-wqmnxv').text.strip()
+
+counter1 = 1
+for page in range(1, max_page):
+    print(f'Page Number {page}')
+    listings = driver.find_elements(By.CSS_SELECTOR, 'a[data-cy="listing-item-link"]')
     
-#     houses.append({
-#         'Title': title,
-#         'Price': price,
-#         'Location': location
-#     })
+    # Loop through each listing and click
+    counter2 = 1
+    for listing in listings:
+        # Open the link in a new tab
+        listing_link = listing.get_attribute("href")
+        driver.execute_script("window.open(arguments[0]);", listing_link)
+        driver.switch_to.window(driver.window_handles[-1])
+        
+        # Wait for the new page to load
+        time.sleep(0.1)  # Adjust delay as necessary
+        title = driver.find_element(By.CLASS_NAME , 'css-9pzx6y').text
+        size = driver.find_element(By.CLASS_NAME , 'css-1ftqasz').text
+        print(title)
+        # Close the tab and return to the main tab
+        driver.close()
+        driver.switch_to.window(driver.window_handles[0])
+        print(f"Clicked and opened listing {counter1}, {counter2}")
+        counter1 += 1
+        counter2 += 1
+    
+    driver.get(url.format(distance) + f'{page+1}')
+    time.sleep(10)
 
-time.sleep(20)
+time.sleep(1)
 # Close the driver
 driver.quit()
 
