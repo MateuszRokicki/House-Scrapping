@@ -28,6 +28,7 @@ driver = webdriver.Chrome(options=options)
 # Navigate to the URL
 url = "https://www.otodom.pl/pl/wyniki/sprzedaz/mieszkanie/opolskie/nyski/lambinowice/lambinowice?distanceRadius={}&viewType=listing&page="
 distance = 25
+print(url.format(distance))
 driver.get(url.format(distance))
 
 # Wait for the page to load
@@ -74,11 +75,17 @@ details_mapping = {
     'Rynek' : 'Market',
     'Forma własności' : 'Form of Ownership',
     'Dostępne od' : 'Availability',
-    'Typ ogłoszeniodawcy' : 'Seller type'
+    'Typ ogłoszeniodawcy' : 'Seller type',
+    'Informacje dodatkowe' : 'Additional information',
+    'Winda' : 'Elevator',
+    'Rodzaj zabudowy' : 'Type of development',
+    'Windows' : 'Okna',
+    'Bezpieczeństwo' : 'Safety',
+    'Wyposażenie' : 'Equipment',
+    'Zabezpieczenia' : 'Security',
 }
 
-
-counter1 = 1
+internal_index = 1
 for page in range(1, max_page):
     print(f'Page Number {page}')
     
@@ -86,9 +93,8 @@ for page in range(1, max_page):
     listings = driver.find_elements(By.CSS_SELECTOR, 'a[data-cy="listing-item-link"]')
     
     # Loop through each listing and click
-    counter2 = 1
     for listing in listings:
-        
+        print(internal_index)
         # Open the link in a new tab for listing
         listing_link = listing.get_attribute("href")
         driver.execute_script("window.open(arguments[0]);", listing_link)
@@ -98,7 +104,7 @@ for page in range(1, max_page):
         time.sleep(0.1)  
         
         # Get listing details
-        title = driver.find_element(By.CLASS_NAME , 'css-9pzx6y').text
+        title = driver.find_element(By.CLASS_NAME , 'css-wqvm7k').text
         price = driver.find_element(By.CLASS_NAME , 'css-1o51x5a').text # 1ftqasz
         ppsm = driver.find_element(By.CLASS_NAME , 'css-z3xj2a').text
         address = driver.find_element(By.CLASS_NAME , 'css-1jjm9oe').text
@@ -112,30 +118,39 @@ for page in range(1, max_page):
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         
         # Open all hidden elements
-        element = driver.find_element(By.CLASS_NAME, "css-1g1u77j")
-        driver.execute_script("arguments[0].click();", element)
+        elements = driver.find_elements(By.CLASS_NAME, "css-1g1u77j")
+        for element in elements:
+            driver.execute_script("arguments[0].click();", element)
         
-        # details = driver.find_elements(By.CLASS_NAME , 'css-t7cajz')
-        # details = [dict(detail.text.replace('\n', '').split(':')) for detail in details]
+        
         details = driver.find_elements(By.CLASS_NAME , 'css-1airkmu')
-        details = [detail.text.replace(':', '').strip() for detail in details]
+        details = [detail.text for detail in details]
         
-        for i in details:
-                print(i)
+        # Add empty string if no value for key
+        i = 0
+        while i < len(details):
+            if ":" in details[i] and (i + 1 == len(details) or ":" in details[i + 1]):
+                details.insert(i + 1, ' ')
+                i += 1  # Skip the inserted element to avoid infinite loop
+            i += 1   
+            
+        # Remove unwanted characters
+        details = [
+            detail.replace(':', '').strip().split('\n') if '\n' in detail else detail.replace(':', '').strip()
+            for detail in details]
+        
         details = dict(zip(details[::2], details[1::2]))
+        mapped_dict = {details_mapping[key]: value for key, value in details.items() if key in details_mapping}
         print(details)
-        # for i in details[1::2]:
-        #     print(i.text)
-        time.sleep(30)
-        exit()
+        print(mapped_dict)
+        time.sleep(2)
+        
         print(title, price, ppsm)
         print(voivodeship, district, commune, city, street)
         # Close the tab and return to the main tab
         driver.close()
         driver.switch_to.window(driver.window_handles[0])
-        print(f"Clicked and opened listing {counter1}, {counter2}")
-        counter1 += 1
-        counter2 += 1
+        internal_index += 11
     
     driver.get(url.format(distance) + f'{page+1}')
     time.sleep(10)
