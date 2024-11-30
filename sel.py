@@ -27,7 +27,7 @@ driver = webdriver.Chrome(options=options)
 
 # Navigate to the URL
 url = "https://www.otodom.pl/pl/wyniki/sprzedaz/mieszkanie/opolskie/nyski/lambinowice/lambinowice?distanceRadius={}&viewType=listing&page="
-distance = 25
+distance = 5
 print(url.format(distance))
 driver.get(url.format(distance))
 
@@ -64,7 +64,7 @@ columns = ['Title', 'Price', 'PpSM', #Basic info
            'Year', 'Elevator', 'Type of Development', 'Material', 'Windows', 'Energy Certificate', 'Safety', #Building and materials
            'Security', 'Media', #Equipment
            'Description']
-df = pd.DataFrame()
+df = pd.DataFrame(columns=columns)
 
 
 details_mapping = {
@@ -79,19 +79,21 @@ details_mapping = {
     'Informacje dodatkowe' : 'Additional information',
     'Winda' : 'Elevator',
     'Rodzaj zabudowy' : 'Type of development',
-    'Windows' : 'Okna',
+    'Materiał budynku' : 'Building Material',
+    'Okna' : 'Windows',
+    'Certyfikat energetyczny' : 'Energy certificate',
     'Bezpieczeństwo' : 'Safety',
     'Wyposażenie' : 'Equipment',
-    'Zabezpieczenia' : 'Security',
+    'Zabezpieczenia' : 'Security'
 }
 
 internal_index = 1
-for page in range(1, max_page):
+for page in range(1, max_page+1):
     print(f'Page Number {page}')
     
     # Get all listings from page
-    listings = driver.find_elements(By.CSS_SELECTOR, 'a[data-cy="listing-item-link"]')
-    
+    listings = driver.find_elements(By.CSS_SELECTOR, 'div[data-cy="search.listing.organic"] a[data-cy="listing-item-link"]')
+    print(f'Listings {len(listings)}')
     # Loop through each listing and click
     for listing in listings:
         print(internal_index)
@@ -113,10 +115,10 @@ for page in range(1, max_page):
         area_rooms = driver.find_elements(By.CLASS_NAME , 'css-1ftqasz')
         area = area_rooms[0].text
         rooms = area_rooms[1].text
-        
+        basic_info = {'Title' : title, 'Price' : price, 'PpSM' : ppsm, 'Voivodeship' : voivodeship, 'District' : district, 'Commune' : commune, 'City' : city, 'Street' : street, 'Area' : area, 'Rooms' : rooms}
         # Scroll to an end of the page to load everything
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        
+        print(basic_info)
         # Open all hidden elements
         elements = driver.find_elements(By.CLASS_NAME, "css-1g1u77j")
         for element in elements:
@@ -140,8 +142,11 @@ for page in range(1, max_page):
             for detail in details]
         
         details = dict(zip(details[::2], details[1::2]))
-        mapped_dict = {details_mapping[key]: value for key, value in details.items() if key in details_mapping}
+        mapped_dict = {details_mapping[key] if key in details_mapping else key : value for key, value in details.items()} 
         print(details)
+        for key in details.keys():
+            if key not in details_mapping.keys():
+                print(key)
         print(mapped_dict)
         time.sleep(2)
         
@@ -150,8 +155,10 @@ for page in range(1, max_page):
         # Close the tab and return to the main tab
         driver.close()
         driver.switch_to.window(driver.window_handles[0])
-        internal_index += 11
+        internal_index += 1
     
+    if page == max_page:
+        break
     driver.get(url.format(distance) + f'{page+1}')
     time.sleep(10)
 
